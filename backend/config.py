@@ -3,7 +3,12 @@ import os
 # Paths
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 DATA_DIR = os.path.join(BASE_DIR, "data")
-WORD_FILE = os.path.join(DATA_DIR, "hewmann_experience_knowledge_base.docx")
+WORD_FILE = os.path.join(DATA_DIR, "hewmann_experience_knowledge_base.docx")  # legacy single-file ref
+WORD_FILES = sorted([
+    os.path.join(DATA_DIR, f)
+    for f in os.listdir(DATA_DIR)
+    if f.endswith(".docx") and not f.startswith("~$")  # skip Word temp files
+])
 CHUNKS_FILE = os.path.join(DATA_DIR, "chunks.json")  # BM25 index source
 
 # Chunking settings

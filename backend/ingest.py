@@ -12,7 +12,7 @@ import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from docx import Document
-from backend.config import WORD_FILE, CHUNKS_FILE, CHUNK_SIZE, CHUNK_OVERLAP
+from backend.config import WORD_FILES, CHUNKS_FILE, CHUNK_SIZE, CHUNK_OVERLAP
 
 
 def load_word_doc(path: str) -> str:
@@ -34,9 +34,8 @@ def chunk_text(text: str, chunk_size: int, overlap: int) -> list[str]:
 
 
 def ingest(force: bool = False):
-    print(f"Loading document: {WORD_FILE}")
-    if not os.path.exists(WORD_FILE):
-        print(f"ERROR: File not found: {WORD_FILE}")
+    if not WORD_FILES:
+        print("ERROR: No .docx files found in data/")
         return False
 
     if not force and os.path.exists(CHUNKS_FILE):
@@ -45,17 +44,31 @@ def ingest(force: bool = False):
         print(f"  Knowledge base already built ({len(existing)} chunks). Use --force to rebuild.")
         return True
 
-    raw_text = load_word_doc(WORD_FILE)
-    print(f"  Extracted {len(raw_text)} characters")
+    all_text_parts = []
+    for path in WORD_FILES:
+        print(f"Loading: {os.path.basename(path)}")
+        if not os.path.exists(path):
+            print(f"  WARNING: File not found, skipping: {path}")
+            continue
+        text = load_word_doc(path)
+        print(f"  Extracted {len(text)} characters")
+        all_text_parts.append(text)
 
-    chunks = chunk_text(raw_text, CHUNK_SIZE, CHUNK_OVERLAP)
-    print(f"  Split into {len(chunks)} chunks")
+    if not all_text_parts:
+        print("ERROR: No text extracted from any file.")
+        return False
+
+    combined = "\n\n".join(all_text_parts)
+    print(f"\nTotal combined text: {len(combined)} characters from {len(all_text_parts)} file(s)")
+
+    chunks = chunk_text(combined, CHUNK_SIZE, CHUNK_OVERLAP)
+    print(f"Split into {len(chunks)} chunks")
 
     os.makedirs(os.path.dirname(CHUNKS_FILE), exist_ok=True)
     with open(CHUNKS_FILE, "w", encoding="utf-8") as f:
         json.dump(chunks, f, ensure_ascii=False, indent=2)
 
-    print(f"  Saved to: {CHUNKS_FILE}")
+    print(f"Saved to: {CHUNKS_FILE}")
     print(f"\nDone. {len(chunks)} chunks ready.")
     return True
 
