@@ -46,7 +46,7 @@ Reply: "Sorry, I don't have that info — please contact our team at hello@hewma
 LLM_PROVIDER = "groq"
 
 # Groq API
-GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
 GROQ_MODEL = "llama-3.3-70b-versatile"   # best free model on Groq
 
 # Claude API (fill when switching later)

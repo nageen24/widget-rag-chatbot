@@ -72,10 +72,9 @@ def chat(req: ChatRequest):
         result = answer(req.question, history=history)
         return ChatResponse(answer=result["answer"], is_greeting=result.get("is_greeting", False))
     except Exception as e:
-        import traceback
         if "Knowledge base not found" in str(e) or "ingest" in str(e):
             raise HTTPException(status_code=503, detail="Knowledge base not built yet. Run ingest first.")
-        raise HTTPException(status_code=500, detail=f"{type(e).__name__}: {e}\n{traceback.format_exc()}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/ingest")
