@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hewmann Experience — Support Chat</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+    * { font-family: 'Inter', sans-serif; }
+
+    #chat-window {
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-origin: bottom right;
+    }
+    #chat-window.hidden-widget {
+      transform: scale(0.95) translateY(10px);
+      opacity: 0;
+      pointer-events: none;
+    }
+    #chat-window.visible-widget {
+      transform: scale(1) translateY(0);
+      opacity: 1;
+      pointer-events: all;
+    }
+
+    .message-bubble { animation: fadeInUp 0.2s ease; }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .typing-dot {
+      animation: blink 1.2s infinite;
+    }
+    .typing-dot:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes blink {
+      0%, 80%, 100% { opacity: 0.2; }
+      40%           { opacity: 1; }
+    }
+
+    #messages::-webkit-scrollbar { width: 4px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+    #messages::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+  </style>
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+
+  <!-- Demo page background -->
+  <div class="text-center text-gray-400 select-none">
+    <p class="text-lg font-medium">Hewmann Experience</p>
+    <p class="text-sm">Chat widget demo — click the button in the bottom right</p>
+  </div>
+
+  <!-- ==================== CHAT WIDGET ==================== -->
+
+  <!-- Toggle Button -->
+  <button
+    id="chat-toggle"
+    onclick="toggleChat()"
+    class="fixed bottom-6 right-6 z-50 w-14 h-14 rounded-full shadow-lg flex items-center justify-center
+           bg-violet-600 hover:bg-violet-700 active:scale-95 transition-all"
+    aria-label="Open chat"
+  >
+    <!-- Chat icon -->
+    <svg id="icon-open" xmlns="http://www.w3.org/2000/svg" class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+        d="M8 10h.01M12 10h.01M16 10h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
+    </svg>
+    <!-- Close icon (hidden initially) -->
+    <svg id="icon-close" xmlns="http://www.w3.org/2000/svg" class="w-6 h-6 text-white hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+    <!-- Unread badge -->
+    <span id="unread-badge"
+      class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 rounded-full text-white text-xs flex items-center justify-center font-bold hidden">
+      1
+    </span>
+  </button>
+
+  <!-- Chat Window -->
+  <div
+    id="chat-window"
+    class="hidden-widget fixed bottom-24 right-6 z-50 w-80 sm:w-96 flex flex-col rounded-2xl shadow-2xl overflow-hidden bg-white"
+    style="height: 520px; max-height: calc(100vh - 120px);"
+  >
+    <!-- Header -->
+    <div class="bg-violet-600 px-4 py-3 flex items-center gap-3">
+      <div class="w-9 h-9 rounded-full bg-white/20 flex items-center justify-center shrink-0">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+        </svg>
+      </div>
+      <div class="flex-1 min-w-0">
+        <p class="text-white font-semibold text-sm leading-tight">Hewmann Experience</p>
+        <p class="text-violet-200 text-xs flex items-center gap-1">
+          <span class="w-1.5 h-1.5 bg-green-400 rounded-full inline-block"></span>
+          Online • Neurodivergent Support
+        </p>
+      </div>
+      <button onclick="toggleChat()" class="text-white/70 hover:text-white transition-colors">
+        <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Messages area -->
+    <div id="messages" class="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-gray-50">
+      <!-- Welcome message -->
+      <div class="message-bubble flex gap-2 items-end">
+        <div class="w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+          </svg>
+        </div>
+        <div class="bg-white rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm max-w-xs">
+          <p class="text-gray-800 text-sm">Hi! I'm Sarah — how can I help you today?</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Suggested questions -->
+    <div id="suggestions" class="px-3 pt-2 flex gap-2 flex-wrap bg-gray-50">
+      <button onclick="askSuggestion('What services do you offer?')"
+        class="text-xs bg-white border border-violet-200 text-violet-700 px-2.5 py-1 rounded-full hover:bg-violet-50 transition-colors">
+        Services
+      </button>
+      <button onclick="askSuggestion('How much does it cost?')"
+        class="text-xs bg-white border border-violet-200 text-violet-700 px-2.5 py-1 rounded-full hover:bg-violet-50 transition-colors">
+        Pricing
+      </button>
+      <button onclick="askSuggestion('Tell me about Hewmann Experience')"
+        class="text-xs bg-white border border-violet-200 text-violet-700 px-2.5 py-1 rounded-full hover:bg-violet-50 transition-colors">
+        About us
+      </button>
+      <button onclick="askSuggestion('How do I book a consultation?')"
+        class="text-xs bg-white border border-violet-200 text-violet-700 px-2.5 py-1 rounded-full hover:bg-violet-50 transition-colors">
+        Book consult
+      </button>
+    </div>
+
+    <!-- Input area -->
+    <div class="px-3 py-3 bg-white border-t border-gray-100">
+      <form onsubmit="sendMessage(event)" class="flex items-center gap-2">
+        <input
+          id="user-input"
+          type="text"
+          placeholder="Type your question..."
+          autocomplete="off"
+          class="flex-1 text-sm px-3 py-2 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-violet-400 focus:border-transparent bg-gray-50 placeholder-gray-400"
+        />
+        <button
+          type="submit"
+          id="send-btn"
+          class="w-9 h-9 rounded-xl bg-violet-600 hover:bg-violet-700 flex items-center justify-center shrink-0 transition-colors disabled:opacity-50"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/>
+          </svg>
+        </button>
+      </form>
+      <p class="text-center text-xs text-gray-400 mt-1.5">Powered by Hewmann Experience AI</p>
+    </div>
+  </div>
+
+  <!-- ==================== SCRIPT ==================== -->
+  <script>
+    const API_URL = window.location.hostname === "localhost" ? "http://localhost:8000/chat" : "/chat";
+    let isOpen = false;
+    let isLoading = false;
+    let chatHistory = [];  // [{role, content}, ...]
+
+    function toggleChat() {
+      isOpen = !isOpen;
+      const win = document.getElementById("chat-window");
+      const iconOpen = document.getElementById("icon-open");
+      const iconClose = document.getElementById("icon-close");
+      const badge = document.getElementById("unread-badge");
+
+      if (isOpen) {
+        win.classList.remove("hidden-widget");
+        win.classList.add("visible-widget");
+        iconOpen.classList.add("hidden");
+        iconClose.classList.remove("hidden");
+        badge.classList.add("hidden");
+        document.getElementById("user-input").focus();
+      } else {
+        win.classList.remove("visible-widget");
+        win.classList.add("hidden-widget");
+        iconOpen.classList.remove("hidden");
+        iconClose.classList.add("hidden");
+      }
+    }
+
+    function askSuggestion(text) {
+      document.getElementById("user-input").value = text;
+      document.getElementById("suggestions").classList.add("hidden");
+      sendMessage(null, text);
+    }
+
+    function appendMessage(text, role) {
+      const container = document.getElementById("messages");
+
+      if (role === "user") {
+        const div = document.createElement("div");
+        div.className = "message-bubble flex justify-end";
+        div.innerHTML = `
+          <div class="bg-violet-600 text-white rounded-2xl rounded-br-sm px-3 py-2 max-w-xs shadow-sm">
+            <p class="text-sm">${escapeHtml(text)}</p>
+          </div>`;
+        container.appendChild(div);
+      } else {
+        const div = document.createElement("div");
+        div.className = "message-bubble flex gap-2 items-end";
+        div.innerHTML = `
+          <div class="w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+            </svg>
+          </div>
+          <div class="bg-white rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm max-w-xs">
+            <p class="text-gray-800 text-sm whitespace-pre-wrap">${escapeHtml(text)}</p>
+          </div>`;
+        container.appendChild(div);
+      }
+
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function showTyping() {
+      const container = document.getElementById("messages");
+      const div = document.createElement("div");
+      div.id = "typing-indicator";
+      div.className = "flex gap-2 items-end";
+      div.innerHTML = `
+        <div class="w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
+          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
+          </svg>
+        </div>
+        <div class="bg-white rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm">
+          <div class="flex gap-1 items-center h-4">
+            <span class="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full inline-block"></span>
+            <span class="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full inline-block"></span>
+            <span class="typing-dot w-1.5 h-1.5 bg-gray-400 rounded-full inline-block"></span>
+          </div>
+        </div>`;
+      container.appendChild(div);
+      container.scrollTop = container.scrollHeight;
+    }
+
+    function removeTyping() {
+      const el = document.getElementById("typing-indicator");
+      if (el) el.remove();
+    }
+
+    async function sendMessage(event, forcedText) {
+      if (event) event.preventDefault();
+      if (isLoading) return;
+
+      const input = document.getElementById("user-input");
+      const question = forcedText || input.value.trim();
+      if (!question) return;
+
+      input.value = "";
+      appendMessage(question, "user");
+      chatHistory.push({ role: "user", content: question });
+      document.getElementById("suggestions").classList.add("hidden");
+
+      isLoading = true;
+      document.getElementById("send-btn").disabled = true;
+      showTyping();
+
+      try {
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ question, history: chatHistory.slice(-10) })
+        });
+
+        removeTyping();
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          appendMessage(err.detail || "Something went wrong. Please try again.", "bot");
+        } else {
+          const data = await res.json();
+          if (data.is_greeting) {
+            const sentences = splitSentences(data.answer);
+            sentences.forEach((s, i) => {
+              setTimeout(() => appendMessage(s, "bot"), i * 600);
+            });
+          } else {
+            appendMessage(data.answer, "bot");
+          }
+          chatHistory.push({ role: "assistant", content: data.answer });
+        }
+      } catch (err) {
+        removeTyping();
+        appendMessage("Unable to connect to the server. Please make sure the chatbot backend is running.", "bot");
+      }
+
+      isLoading = false;
+      document.getElementById("send-btn").disabled = false;
+      input.focus();
+    }
+
+    function splitSentences(text) {
+      // Split on sentence-ending punctuation followed by a space or end
+      const parts = text.match(/[^.!?]+[.!?]+(\s|$)/g);
+      if (!parts || parts.length <= 1) return [text];
+      return parts.map(s => s.trim()).filter(s => s.length > 0);
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
+    }
+
+    // Show unread badge after 3s if chat is closed
+    setTimeout(() => {
+      if (!isOpen) {
+        document.getElementById("unread-badge").classList.remove("hidden");
+      }
+    }, 3000);
+  </script>
+</body>
+</html>
