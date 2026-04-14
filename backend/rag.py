@@ -72,6 +72,19 @@ GREETINGS = {
 
 AFFIRMATIVES = {"yes", "yeah", "yep", "yup", "sure", "please", "ok", "okay", "go ahead", "tell me", "tell me more", "yes please", "of course", "absolutely"}
 
+EMOTIONAL_PHRASES = [
+    "frustrated", "frustrating", "so frustrated", "i'm frustrated",
+    "annoyed", "exhausted", "overwhelmed", "burned out", "burnt out",
+    "i give up", "don't know what to do", "don't know where to turn",
+    "nobody helps", "no one helps", "no one listens", "nobody listens",
+    "tired of", "fed up", "struggling", "i can't", "can't cope",
+    "lost", "hopeless", "helpless", "scared", "worried", "anxious",
+    "not fair", "so hard", "this is hard", "it's hard", "so difficult",
+    "falling apart", "breaking down", "at my wit", "stressed",
+    "upset", "angry", "furious", "heartbroken", "devastated",
+    "my child", "my son", "my daughter", "my kid",  # emotional context
+]
+
 def is_greeting(text: str) -> bool:
     clean = text.strip().lower().strip("!.,? ")
     if clean in GREETINGS:
@@ -82,6 +95,10 @@ def is_greeting(text: str) -> bool:
 def is_affirmative(text: str) -> bool:
     clean = text.strip().lower().strip("!.,? ")
     return clean in AFFIRMATIVES
+
+def is_emotional(text: str) -> bool:
+    low = text.lower()
+    return any(phrase in low for phrase in EMOTIONAL_PHRASES)
 
 
 def call_llm(messages: list) -> str:
@@ -135,6 +152,21 @@ def answer(question: str, history: list = None) -> dict:
         conversation.append({"role": "user", "content": question})
         response = call_llm(conversation)
         return {"answer": response, "sources": [], "is_greeting": True}
+
+    # Handle emotional / venting messages — respond with empathy, no RAG needed
+    if is_emotional(question):
+        emotional_prompt = (
+            f"{question}\n\n"
+            "The user is expressing frustration, stress, or an emotional struggle. "
+            "Do NOT redirect them to contact the team. "
+            "Respond with genuine warmth and empathy — acknowledge their feelings first, "
+            "then gently connect it to how Hewmann Experience can support them. "
+            "Keep to 2 sentences: sentence 1 validates their emotion, "
+            "sentence 2 offers a soft, helpful next step or reassurance."
+        )
+        conversation.append({"role": "user", "content": emotional_prompt})
+        response = call_llm(conversation)
+        return {"answer": response, "sources": [], "is_emotional": True}
 
     try:
         chunks = retrieve_context(effective_question)
