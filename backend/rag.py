@@ -72,19 +72,6 @@ GREETINGS = {
 
 AFFIRMATIVES = {"yes", "yeah", "yep", "yup", "sure", "please", "ok", "okay", "go ahead", "tell me", "tell me more", "yes please", "of course", "absolutely"}
 
-EMOTIONAL_PHRASES = [
-    "frustrated", "frustrating", "so frustrated", "i'm frustrated",
-    "annoyed", "exhausted", "overwhelmed", "burned out", "burnt out",
-    "i give up", "don't know what to do", "don't know where to turn",
-    "nobody helps", "no one helps", "no one listens", "nobody listens",
-    "tired of", "fed up", "struggling", "i can't", "can't cope",
-    "lost", "hopeless", "helpless", "scared", "worried", "anxious",
-    "not fair", "so hard", "this is hard", "it's hard", "so difficult",
-    "falling apart", "breaking down", "at my wit", "stressed",
-    "upset", "angry", "furious", "heartbroken", "devastated",
-    "my child", "my son", "my daughter", "my kid",  # emotional context
-]
-
 def is_greeting(text: str) -> bool:
     clean = text.strip().lower().strip("!.,? ")
     if clean in GREETINGS:
@@ -96,9 +83,45 @@ def is_affirmative(text: str) -> bool:
     clean = text.strip().lower().strip("!.,? ")
     return clean in AFFIRMATIVES
 
-def is_emotional(text: str) -> bool:
-    low = text.lower()
-    return any(phrase in low for phrase in EMOTIONAL_PHRASES)
+def classify_tone(text: str) -> str:
+    """Use LLM to classify message tone. Returns 'emotional' or 'neutral'.
+    Fast, low-token call — single word response expected."""
+    try:
+        prompt = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a tone classifier. Read the user message and reply with exactly one word:\n"
+                    "- 'emotional' if the message expresses frustration, anger, sadness, fear, overwhelm, "
+                    "desperation, hopelessness, venting, complaint, distress, or any negative emotion — "
+                    "regardless of the exact words used. Look at tone and intent, not just keywords.\n"
+                    "- 'neutral' if the message is a normal question, request, or statement with no emotional charge.\n"
+                    "Reply ONLY with 'emotional' or 'neutral'. No other words."
+                )
+            },
+            {"role": "user", "content": text}
+        ]
+        if LLM_PROVIDER == "groq":
+            from groq import Groq
+            client = Groq(api_key=GROQ_API_KEY)
+            r = client.chat.completions.create(
+                model=GROQ_MODEL, messages=prompt,
+                max_tokens=5, temperature=0.0
+            )
+            result = r.choices[0].message.content.strip().lower()
+        elif LLM_PROVIDER == "claude":
+            import anthropic
+            client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
+            msg = client.messages.create(
+                model=CLAUDE_MODEL, max_tokens=5,
+                system=prompt[0]["content"], messages=prompt[1:]
+            )
+            result = msg.content[0].text.strip().lower()
+        else:
+            return "neutral"
+        return "emotional" if "emotional" in result else "neutral"
+    except Exception:
+        return "neutral"  # fail-safe: treat as normal question
 
 
 def call_llm(messages: list) -> str:
@@ -154,7 +177,7 @@ def answer(question: str, history: list = None) -> dict:
         return {"answer": response, "sources": [], "is_greeting": True}
 
     # Handle emotional / venting messages — respond with empathy, no RAG needed
-    if is_emotional(question):
+    if classify_tone(question) == "emotional":
         emotional_prompt = (
             f"{question}\n\n"
             "The user is expressing frustration, stress, or an emotional struggle. "
