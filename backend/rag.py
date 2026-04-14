@@ -92,7 +92,7 @@ def call_llm(messages: list) -> str:
             model=GROQ_MODEL,
             messages=messages,
             max_tokens=512,
-            temperature=0.4
+            temperature=0.2
         )
         return response.choices[0].message.content
     elif LLM_PROVIDER == "ollama":
