@@ -1,8 +1,8 @@
 """
 Ingest pipeline:
-  1. Load Word document
+  1. Load all .docx and .pdf files from data/
   2. Split into overlapping chunks
-  3. Save chunks to JSON (no vector DB needed — BM25 search handles retrieval)
+  3. Save chunks to JSON (BM25 search handles retrieval)
 """
 
 import os
@@ -12,13 +12,33 @@ import json
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from docx import Document
-from backend.config import WORD_FILES, CHUNKS_FILE, CHUNK_SIZE, CHUNK_OVERLAP
+from backend.config import ALL_SOURCE_FILES, CHUNKS_FILE, CHUNK_SIZE, CHUNK_OVERLAP
 
 
-def load_word_doc(path: str) -> str:
+def load_docx(path: str) -> str:
     doc = Document(path)
     paragraphs = [p.text.strip() for p in doc.paragraphs if p.text.strip()]
     return "\n\n".join(paragraphs)
+
+
+def load_pdf(path: str) -> str:
+    from pypdf import PdfReader
+    reader = PdfReader(path)
+    pages = []
+    for page in reader.pages:
+        text = page.extract_text()
+        if text and text.strip():
+            pages.append(text.strip())
+    return "\n\n".join(pages)
+
+
+def load_file(path: str) -> str:
+    ext = os.path.splitext(path)[1].lower()
+    if ext == ".docx":
+        return load_docx(path)
+    elif ext == ".pdf":
+        return load_pdf(path)
+    return ""
 
 
 def chunk_text(text: str, chunk_size: int, overlap: int) -> list[str]:
@@ -34,8 +54,8 @@ def chunk_text(text: str, chunk_size: int, overlap: int) -> list[str]:
 
 
 def ingest(force: bool = False):
-    if not WORD_FILES:
-        print("ERROR: No .docx files found in data/")
+    if not ALL_SOURCE_FILES:
+        print("ERROR: No .docx or .pdf files found in data/")
         return False
 
     if not force and os.path.exists(CHUNKS_FILE):
@@ -45,14 +65,17 @@ def ingest(force: bool = False):
         return True
 
     all_text_parts = []
-    for path in WORD_FILES:
+    for path in ALL_SOURCE_FILES:
         print(f"Loading: {os.path.basename(path)}")
         if not os.path.exists(path):
             print(f"  WARNING: File not found, skipping: {path}")
             continue
-        text = load_word_doc(path)
-        print(f"  Extracted {len(text)} characters")
-        all_text_parts.append(text)
+        text = load_file(path)
+        if text:
+            print(f"  Extracted {len(text)} characters")
+            all_text_parts.append(text)
+        else:
+            print(f"  WARNING: No text extracted from {os.path.basename(path)}")
 
     if not all_text_parts:
         print("ERROR: No text extracted from any file.")

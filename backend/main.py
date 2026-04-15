@@ -47,7 +47,7 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     answer: str
-    is_greeting: bool = False
+    intent: str = "specific"
 
 
 @app.get("/")
@@ -70,7 +70,7 @@ def chat(req: ChatRequest):
     try:
         history = [{"role": m.role, "content": m.content} for m in req.history]
         result = answer(req.question, history=history)
-        return ChatResponse(answer=result["answer"], is_greeting=result.get("is_greeting", False))
+        return ChatResponse(answer=result["answer"], intent=result.get("intent", "specific"))
     except Exception as e:
         if "Knowledge base not found" in str(e) or "ingest" in str(e):
             raise HTTPException(status_code=503, detail="Knowledge base not built yet. Run ingest first.")

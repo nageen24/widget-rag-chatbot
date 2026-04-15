@@ -16,7 +16,7 @@ if exist "data\chunks.json" (
   echo  Knowledge base found - skipping ingest.
 ) else (
   echo  Building knowledge base from Word doc...
-  py backend/ingest.py
+  "C:\Users\AL HAMD TRADERS\AppData\Local\Python\bin\python.exe" backend/ingest.py
 )
 
 :: Step 2 — Open Chrome after 3s, then start server
@@ -27,4 +27,4 @@ echo.
 
 start "" cmd /c "timeout /t 3 /nobreak >nul && start chrome http://localhost:8000"
 
-py -m uvicorn backend.main:app --host 0.0.0.0 --port 8000
+"C:\Users\AL HAMD TRADERS\AppData\Local\Python\bin\python.exe" -m uvicorn backend.main:app --host 0.0.0.0 --port 8000

@@ -109,18 +109,6 @@
 
     <!-- Messages area -->
     <div id="messages" class="flex-1 overflow-y-auto px-4 py-3 space-y-3 bg-gray-50">
-      <!-- Welcome message -->
-      <div class="message-bubble flex gap-2 items-end">
-        <div class="w-7 h-7 rounded-full bg-violet-100 flex items-center justify-center shrink-0">
-          <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>
-          </svg>
-        </div>
-        <div class="bg-white rounded-2xl rounded-bl-sm px-3 py-2 shadow-sm max-w-xs">
-          <p class="text-gray-800 text-sm">Hi! I'm Sarah — how can I help you today?</p>
-        </div>
-      </div>
     </div>
 
     <!-- Suggested questions -->
@@ -291,14 +279,7 @@
           appendMessage(err.detail || "Something went wrong. Please try again.", "bot");
         } else {
           const data = await res.json();
-          if (data.is_greeting) {
-            const sentences = splitSentences(data.answer);
-            sentences.forEach((s, i) => {
-              setTimeout(() => appendMessage(s, "bot"), i * 600);
-            });
-          } else {
-            appendMessage(data.answer, "bot");
-          }
+          appendMessage(data.answer, "bot");
           chatHistory.push({ role: "assistant", content: data.answer });
         }
       } catch (err) {
@@ -326,12 +307,6 @@
         .replace(/"/g, "&quot;");
     }
 
-    // Show unread badge after 3s if chat is closed
-    setTimeout(() => {
-      if (!isOpen) {
-        document.getElementById("unread-badge").classList.remove("hidden");
-      }
-    }, 3000);
   </script>
 </body>
 </html>
