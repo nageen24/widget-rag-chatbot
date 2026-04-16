@@ -90,9 +90,15 @@ Answer based only on the context above:"""
 
 AFFIRMATIVES = {"yes", "yeah", "yep", "yup", "sure", "please", "ok", "okay", "go ahead", "tell me", "tell me more", "yes please", "of course", "absolutely"}
 
+FAREWELLS = {"bye", "goodbye", "good bye", "see you", "see ya", "take care", "later", "cya", "farewell", "ttyl", "that's all", "thats all", "thanks bye", "thank you bye", "thanks goodbye", "thank you goodbye", "i'm done", "im done", "all done", "have a good day", "have a nice day"}
+
 def is_affirmative(text: str) -> bool:
     clean = text.strip().lower().strip("!.,? ")
     return clean in AFFIRMATIVES
+
+def is_farewell(text: str) -> bool:
+    clean = text.strip().lower().strip("!.,? ")
+    return clean in FAREWELLS or any(clean.startswith(f) for f in ("bye", "goodbye", "good bye", "see you", "take care", "farewell"))
 
 
 def classify_intent(text: str) -> str:
@@ -187,6 +193,15 @@ def answer(question: str, history: list = None) -> dict:
         last_bot = next((m["content"] for m in reversed(history) if m["role"] == "assistant"), None)
         if last_bot:
             effective_question = f"{last_bot}\nThe user confirmed yes. Answer the follow-up question you asked."
+
+    # --- FAREWELL (local check — no LLM call needed) ---
+    if is_farewell(question):
+        conversation = [
+            {"role": "system", "content": CONVERSATIONAL_PROMPT},
+            {"role": "user", "content": question}
+        ]
+        response = call_llm(conversation, max_tokens=25)
+        return {"answer": response, "sources": [], "intent": "farewell"}
 
     # Classify intent — single LLM call, one word back
     intent = classify_intent(question)
