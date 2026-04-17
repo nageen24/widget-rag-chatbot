@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from backend.rag import answer
 from backend.ingest import ingest
 
-app = FastAPI(title="Hewmann Experience Chatbot API")
+app = FastAPI(title="ABC Tech Chatbot API")
 
 # Allow the widget to call the API from any origin (for local dev + embedding)
 app.add_middleware(
