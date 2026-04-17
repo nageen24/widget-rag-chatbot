@@ -75,7 +75,7 @@ def enforce_word_limits(response: str, answer_limit: int = 25, question_limit: i
 
 def build_prompt(context_chunks: list[str], question: str) -> str:
     context = "\n\n---\n\n".join(context_chunks)
-    return f"""Context information from Hewmann Experience:
+    return f"""Context information from ABC Tech (NexaCore Technologies):
 
 {context}
 
@@ -108,7 +108,7 @@ def classify_intent(text: str) -> str:
     """
     try:
         system = (
-            "You are an intent classifier for a neurodivergent family support chatbot called Hewmann Experience. "
+            "You are an intent classifier for a business AI chatbot called Alexa at ABC Tech (NexaCore Technologies). "
             "Classify the user message into exactly one category. Reply with ONLY that one word.\n\n"
             "Categories:\n"
             "- greeting: hello, hi, hey, salutations, opening pleasantries with no question; "
@@ -117,10 +117,10 @@ def classify_intent(text: str) -> str:
             "- emotional: genuine emotional distress — frustration, sadness, fear, overwhelm, exhaustion, venting. "
             "NOT casual expressions like 'what the hell', 'get out', 'omg', 'seriously?' — those are conversational. "
             "NOT generic help requests like 'i need help', 'help me', 'can you help', 'help' with no emotional context — those are conversational.\n"
-            "- specific: ANY question about the company, its services, programs, pricing, staff, IEP, ADHD, autism support, "
-            "coaching, workshops, scheduling, or what the company does — including vague ones like "
+            "- specific: ANY question about the company, its services, products, pricing, courses, AI development, "
+            "consulting, chatbots, automation, scheduling, or what the company does — including vague ones like "
             "'tell me about your company', 'what do you offer', 'are you associated with a company', "
-            "'what is Hewmann Experience', 'do you know about this company'. When in doubt, use specific.\n"
+            "'what is ABC Tech', 'what is NexaCore', 'do you know about this company'. When in doubt, use specific.\n"
             "- conversational: pure small talk with zero company relevance — 'how are you', 'good morning', "
             "'what is the universe', 'tell me a joke', 'what the hell', 'get out', casual exclamations\n\n"
             "Reply ONLY with one word: greeting, emotional, conversational, or specific"
