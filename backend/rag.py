@@ -134,9 +134,12 @@ def classify_intent(text: str) -> str:
             client = Groq(api_key=GROQ_API_KEY)
             r = client.chat.completions.create(
                 model=GROQ_MODEL, messages=messages,
-                max_tokens=5, temperature=0.0
+                max_tokens=20, temperature=0.0,
+                # gpt-oss burns hidden reasoning tokens by default; keep it minimal for a 1-word label.
+                # Passed via extra_body since the pinned groq SDK (0.25.0) predates this param.
+                extra_body={"reasoning_effort": "low"}
             )
-            result = r.choices[0].message.content.strip().lower()
+            result = (r.choices[0].message.content or "").strip().lower()
         elif LLM_PROVIDER == "claude":
             import anthropic
             client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
@@ -163,9 +166,12 @@ def call_llm(messages: list, max_tokens: int = 512) -> str:
             model=GROQ_MODEL,
             messages=messages,
             max_tokens=max_tokens,
-            temperature=0.2
+            temperature=0.2,
+            # gpt-oss burns hidden reasoning tokens by default; keep the budget for the visible answer.
+            # Passed via extra_body since the pinned groq SDK (0.25.0) predates this param.
+            extra_body={"reasoning_effort": "low"}
         )
-        return response.choices[0].message.content
+        return response.choices[0].message.content or ""
     elif LLM_PROVIDER == "ollama":
         import ollama
         response = ollama.chat(model=OLLAMA_MODEL, messages=messages)
@@ -201,7 +207,7 @@ def answer(question: str, history: list = None) -> dict:
             {"role": "system", "content": CONVERSATIONAL_PROMPT},
             {"role": "user", "content": question}
         ]
-        response = call_llm(conversation, max_tokens=25)
+        response = call_llm(conversation, max_tokens=60)
         return {"answer": response, "sources": [], "intent": "farewell"}
 
     # Classify intent — single LLM call, one word back
@@ -213,7 +219,7 @@ def answer(question: str, history: list = None) -> dict:
             {"role": "system", "content": CONVERSATIONAL_PROMPT},
             {"role": "user", "content": question}
         ]
-        response = call_llm(conversation, max_tokens=40)
+        response = call_llm(conversation, max_tokens=90)
         return {"answer": response, "sources": [], "intent": "greeting"}
 
     # --- EMOTIONAL ---
@@ -224,7 +230,7 @@ def answer(question: str, history: list = None) -> dict:
         for m in history[-4:]:
             conversation.append({"role": m["role"], "content": m["content"]})
         conversation.append({"role": "user", "content": question})
-        response = call_llm(conversation, max_tokens=60)
+        response = call_llm(conversation, max_tokens=120)
         return {"answer": response, "sources": [], "intent": "emotional"}
 
     # --- CONVERSATIONAL ---
@@ -235,7 +241,7 @@ def answer(question: str, history: list = None) -> dict:
         for m in history[-4:]:
             conversation.append({"role": m["role"], "content": m["content"]})
         conversation.append({"role": "user", "content": question})
-        response = call_llm(conversation, max_tokens=40)
+        response = call_llm(conversation, max_tokens=90)
         return {"answer": response, "sources": [], "intent": "conversational"}
 
     # --- SPECIFIC (RAG) ---
@@ -251,10 +257,10 @@ def answer(question: str, history: list = None) -> dict:
     if not chunks:
         # No doc match — use fallback within system prompt rules
         conversation.append({"role": "user", "content": effective_question})
-        response = call_llm(conversation, max_tokens=80)
+        response = call_llm(conversation, max_tokens=160)
         return {"answer": enforce_word_limits(response), "sources": [], "intent": "specific"}
 
     prompt = build_prompt(chunks, effective_question)
     conversation.append({"role": "user", "content": prompt})
-    response = call_llm(conversation, max_tokens=80)
+    response = call_llm(conversation, max_tokens=160)
     return {"answer": enforce_word_limits(response), "sources": chunks, "intent": "specific"}
