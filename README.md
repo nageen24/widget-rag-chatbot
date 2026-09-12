@@ -1,13 +1,13 @@
 # ABC Tech RAG Chatbot — Alexa
 
-An intelligent RAG (Retrieval-Augmented Generation) chatbot for **ABC Tech**, deployed as an embeddable website widget. Powered by Groq (Llama 3.1) and BM25 retrieval — answers strictly from company documents, no hallucinations.
+An intelligent RAG (Retrieval-Augmented Generation) chatbot for **ABC Tech**, deployed as an embeddable website widget. Powered by Groq (GPT-OSS 20B) and BM25 retrieval — answers strictly from company documents, no hallucinations.
 
 ## Tech Stack
 
 | Layer | Technology |
 |-------|-----------|
 | Backend | Python · FastAPI |
-| LLM | Groq API (llama-3.1-8b-instant) |
+| LLM | Groq API (openai/gpt-oss-20b) |
 | Retrieval | BM25 (rank-bm25) |
 | Document Parsing | python-docx · pypdf |
 | Frontend | HTML · Tailwind CSS · Vanilla JS |

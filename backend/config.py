@@ -133,7 +133,7 @@ LLM_PROVIDER = "groq"
 
 # Groq API
 GROQ_API_KEY = os.getenv("GROQ_API_KEY", "").strip()
-GROQ_MODEL = "llama-3.1-8b-instant"   # fast, low token usage
+GROQ_MODEL = "openai/gpt-oss-20b"   # llama-3.1-8b-instant was deprecated by Groq (shutdown 08/16/26); this is Groq's recommended replacement
 
 # Claude API (fill when switching later)
 CLAUDE_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
