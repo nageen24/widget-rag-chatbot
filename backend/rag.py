@@ -134,9 +134,10 @@ def classify_intent(text: str) -> str:
             client = Groq(api_key=GROQ_API_KEY)
             r = client.chat.completions.create(
                 model=GROQ_MODEL, messages=messages,
-                max_tokens=20, temperature=0.0,
-                # gpt-oss burns hidden reasoning tokens by default; keep it minimal for a 1-word label.
-                # Passed via extra_body since the pinned groq SDK (0.25.0) predates this param.
+                # gpt-oss models: use max_completion_tokens, not the legacy max_tokens alias, and
+                # give hidden reasoning room even at reasoning_effort="low" — a 1-word label still
+                # needs headroom or the reasoning pass alone can exhaust a tiny budget.
+                max_completion_tokens=80, temperature=0.0,
                 extra_body={"reasoning_effort": "low"}
             )
             result = (r.choices[0].message.content or "").strip().lower()
@@ -165,10 +166,14 @@ def call_llm(messages: list, max_tokens: int = 512) -> str:
         response = client.chat.completions.create(
             model=GROQ_MODEL,
             messages=messages,
-            max_tokens=max_tokens,
+            # gpt-oss models: max_tokens is a legacy alias Groq recommends against for these models —
+            # use max_completion_tokens, and give it real headroom. Hidden reasoning tokens (even at
+            # reasoning_effort="low") come out of this same budget before the visible answer starts,
+            # so a budget sized only for the visible reply (e.g. 80) can be fully spent on reasoning
+            # and leave content empty. The caller's max_tokens still bounds the *visible* answer via
+            # enforce_word_limits() afterward — this just stops the model being cut off mid-thought.
+            max_completion_tokens=max(max_tokens * 4, 300),
             temperature=0.2,
-            # gpt-oss burns hidden reasoning tokens by default; keep the budget for the visible answer.
-            # Passed via extra_body since the pinned groq SDK (0.25.0) predates this param.
             extra_body={"reasoning_effort": "low"}
         )
         return response.choices[0].message.content or ""
